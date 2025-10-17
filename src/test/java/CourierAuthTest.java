@@ -2,6 +2,7 @@ import io.qameta.allure.*;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.ValidatableResponse;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,12 +18,20 @@ import static org.hamcrest.Matchers.*;
 public class CourierAuthTest {
 
     private Courier testCourier;
+    private Integer courierId;
 
     @BeforeEach
     void setup() {
         RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru";
         // Создаем тестового курьера перед каждым тестом
         createTestCourier();
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (courierId != null) {
+            deleteCourier(courierId);
+        }
     }
 
     // Создание тестового курьера
@@ -33,14 +42,26 @@ public class CourierAuthTest {
                 "test_password_123"
         );
 
-        // Отправляем запрос на создание курьера
-        given()
+        // Отправляем запрос на создание курьера и сохраняем ID
+        courierId = given()
                 .contentType(ContentType.JSON)
                 .body(testCourier)
                 .when()
                 .post("/api/v1/courier")
                 .then()
-                .statusCode(201);
+                .statusCode(201)
+                .extract()
+                .path("id");
+    }
+
+    // Удаление курьера по ID
+    @Step("Удаление курьера с ID: {id}")
+    private void deleteCourier(int id) {
+        given()
+                .when()
+                .delete("/api/v1/courier/{id}", id)
+                .then()
+                .statusCode(200);
     }
 
     // Позитивный тест: успешная авторизация
@@ -129,4 +150,3 @@ public class CourierAuthTest {
         public void setPassword(String password) { this.password = password; }
     }
 }
-
